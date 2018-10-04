@@ -9,16 +9,7 @@ const getVideo = (workoutUrl, callback) => {
             key: YOUTUBE_API_KEY
         }
     }
-    return axios.get('https://www.googleapis.com/youtube/v3/videos', obj)
-    // .then(({ data }) => {
-    //     // call the callback on the resulting list of videos from the playlist
-    //     // console.log(data.items);
-    //     const [ item ] = data.items;
-    //     console.log(item);
-    // })
-    // .catch(err => {
-    //     console.error(err);
-    // })
+    return axios.get('https://www.googleapis.com/youtube/v3/videos', obj);
 };
 
 module.exports = getVideo;
