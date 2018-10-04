@@ -1,8 +1,9 @@
-const express = require('express')
+const express = require('express');
 const bodyParser = require('body-parser');
 
 const db = require('../database/dbHelpers');
-const app = express()
+const app = express();
+const getVideo = require('../../external-apis/youtube.js');
 
 const workout = require('../Algorithms/workout.js');
 const meal = require('../Algorithms/recipe.js');
@@ -61,7 +62,8 @@ app.get('/dinner', (req,res)=>{
     generateSeven(meals);
     res.send(dinnerResponse);
   })
-})
+});
+
 app.get('/lunch', (req,res)=>{
   let lunchRecipes = [];
   meal.getLunch(0,500,"alcohol-free", (meals)=>{
@@ -69,12 +71,14 @@ app.get('/lunch', (req,res)=>{
     meal.generateSeven(result.hits, lunchRecipes);
     res.send(lunchRecipes);
   })
-})
+});
+
 app.get('/signupWO', (req,res)=>{
   workout.generateWorkoutSignUp(3, (workout)=> {
     res.send(workout);
   })
-})
+});
+
 app.get('/breakfast', (req, res) => {
   let meals = [];
   let breakfastResponse = [];
@@ -83,7 +87,7 @@ app.get('/breakfast', (req, res) => {
     let recipes = result.hits;
     recipes.forEach(recipe => {
       meals.push(recipe);
-    });
+    })
   })     
   meal.getYogurt(300, 700, "alcohol-free", (meal) => {
     let result = JSON.parse(meal);
@@ -114,7 +118,19 @@ app.get('/breakfast', (req, res) => {
     res.send(breakfastResponse);
     // console.log(meals.length);
   })    
-})
+});
+
+app.get('/exerciseVideo', (req, res) => {
+  const { title } = req;
+  getVideo(title)
+    .then(({ data }) => {
+      const [item] = data.items
+      res.send(item);
+    })
+    .catch(err => {
+      console.log(err);
+    });
+});
 
 app.get('/test', (req, res) => {
   db.getYoutubeLink('Burpee')
