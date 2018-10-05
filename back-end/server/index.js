@@ -3,7 +3,7 @@ const bodyParser = require('body-parser');
 
 const db = require('../database/dbHelpers');
 const app = express();
-const getVideo = require('../../external-apis/youtube.js');
+const getVideo = require('../external-apis/youtube.js');
 
 const workout = require('../Algorithms/workout.js');
 const meal = require('../Algorithms/recipe.js');
@@ -121,25 +121,18 @@ app.get('/breakfast', (req, res) => {
 });
 
 app.get('/exerciseVideo', (req, res) => {
-  const { title } = req;
-  getVideo(title)
+  db.getYoutubeLink('Burpee')
+    .then((videos) => {
+      const videoId = videos[0].youtube_link.slice(30);
+      return getVideo(videoId)
+    })
     .then(({ data }) => {
-      const [item] = data.items
-      res.send(item);
+        const [item] = data.items
+        res.send(item);
     })
     .catch(err => {
       console.log(err);
     });
-});
-
-app.get('/test', (req, res) => {
-  db.getYoutubeLink('Burpee')
-  .then((userArr) => {
-    res.send(userArr);
-  })
-  .catch((err) =>{
-    console.error(err);
-  });
 });
 
 app.post('/test', (req, res) =>{
