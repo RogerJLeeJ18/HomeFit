@@ -125,11 +125,11 @@ app.use(bodyParser.urlencoded({
 }));
 
 app.get('/home', (req, res) => {
-  res.redirect('localhost:3000/signup')
+  res.redirect('localhost:81/signup')
 })
 
 app.get('/personalInfo', (req, res) => {
-  res.redirect('localhost:3000/signup')
+  res.redirect('localhost:81/signup')
 })
 
 //api call for weather
@@ -279,5 +279,5 @@ app.post('/personalInfo', (req, res) =>{
   res.end();
 });
 
-const port = 3000;
+const port = 81;
 app.listen(port, () => console.log(`Example app listening on port ${port}!`));
