@@ -18,11 +18,11 @@ import { IImage } from './iImage';
 export class HomeComponent implements OnInit {
   imageUrls: (string | IImage)[] = [];
   mealImages = [];
-  meals = [];
+  meals;
   meals2 = [];
   meals3 = [];
   currentWeather = [];
-  workoutDates = [];
+  workoutDates =  [];
   time: number;
   timeStamp: Date;
   timeStampString: string;
@@ -78,54 +78,52 @@ export class HomeComponent implements OnInit {
   getCookieInfo() {
     let cookie = document.cookie;
     let emailArr = cookie.split('=');
-    this.email = emailArr[1];
-    console.log(this.email);
+    this.email = emailArr[emailArr.length -1];
   }
 
-  // make a function that takes a user email and sends post request to the backend endpoint that returns an array of information
+  // function that takes a user email and sends post request to the backend endpoint that returns an array of information
   // from the completed strength table and cardio table
-  getCompletedWorkouts(email) {
+  getCompletedWorkouts() {
     // should return a promise with an array in its callback
-    // hardcode the email to be 	reptar@rugrats.com
-    // this.workoutService.getCompletedWorkouts("reptar@rugrats.com")
-    //   .subscribe(compWorkOuts => {
-    //     // use the array of completed workouts to get dates that should be marked on the calender
-    //     console.log(compWorkOuts);
-    //     // if (compWorkOuts) {
-    //     //   // loop through the completed workouts array
-    //     //   compWorkOuts.forEach(completed => {
-    //     //     // for each completed push into the workout dates array the date property on the completed
-    //     //     this.workoutDates.push(completed.date);
-    //     //   });
-    //     // }
-    //   })
+    // call the get completed workouts function with the email
+    this.workoutService.getCompletedWorkouts(this.email)
+      .subscribe(compWorkOuts => {
+        // use the array of completed workouts to get dates that should be marked on the calender
+        if (compWorkOuts) {
+          this.workoutDates = this.workoutDates.concat(compWorkOuts);
+        }
+      });
   }
 
   getBreakfast() {
-    this.meals = [];
     return this.foodService.getBreakfast()
-      .subscribe(breakfastFood => {
-        this.meals.push(breakfastFood)
-        // console.log(this.meals);
-        this.mealImages = this.meals[0].map(meal => meal.recipe.image)
+    .subscribe(breakfastFood => {
+      this.meals = breakfastFood
+      this.mealImages = this.meals.map(meal => {
+        let proof = () => {
+          window.open(meal.url);
+        }
+        return {
+          url: meal.image,
+          href: meal.url,
+          clickAction: proof
+        }
       })
+    })
   }
 
   getLunch() {
     this.meals = [];
     return this.foodService.getLunch()
       .subscribe(lunchFood => {
-        // console.log(Array.isArray(lunchFood), lunchFood);
-        this.meals.push(lunchFood);
-        console.log('we got lunchFood', this.meals);
-        // this.mealImages = this.meals[0].map(meal => meal.recipe.image)
-        this.imageUrls = this.meals[0].map(meal => {
+        this.meals = lunchFood;
+        this.imageUrls = this.meals.map(meal => {
           let proof = () => {
-            window.open(meal.recipe.url);
+            window.open(meal.url);
           }
           return {
-            url: meal.recipe.image,
-            href: meal.recipe.url,
+            url: meal.image,
+            href: meal.url,
             clickAction: proof
           }
         })
@@ -134,13 +132,19 @@ export class HomeComponent implements OnInit {
 
 
   getDinner() {
-    console.log('Getting Dinner');
-    this.meals = [];
     return this.foodService.getDinner()
       .subscribe(dinnerFood => {
-        this.meals.push(dinnerFood);
-        // console.log(this.meals);
-        this.mealImages = this.meals[0].map(meal => meal.recipe.image)
+        this.meals = dinnerFood;
+        this.imageUrls = this.meals.map(meal => {
+          let proof = () => {
+            window.open(meal.url);
+          }
+          return {
+            url: meal.image,
+            href: meal.url,
+            clickAction: proof
+          }
+        })
       });
   }
 
@@ -194,9 +198,9 @@ export class HomeComponent implements OnInit {
     // setTimeout(() => {
     //   this.getWeather();
     // }, 4500)
+    this.getCookieInfo();
     this.getCurrentTime();
     this.displayMeal();
+    this.getCompletedWorkouts();
   }
-
-  
 }

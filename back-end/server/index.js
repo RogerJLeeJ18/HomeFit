@@ -60,8 +60,8 @@ app.get('/getUser', (req, res) => {
 })
 
 app.get('/getCompletedWO', (req, res) => {
-  console.log(req.query.email)
-  db.getUserInfoByEmail(req.query.email)
+  let email = req.query.email;
+  db.getUserInfoByEmail(email)
     .then((userInfo)=> {
       return userInfo;
     })
@@ -70,16 +70,18 @@ app.get('/getCompletedWO', (req, res) => {
       let completedWorkouts = [];
       db.getCompCardioByUserId(id)
         .then(compCardio => {
-          completedWorkouts.push(compCardio);
+          'should be a users completed workout'
+          completedWorkouts = completedWorkouts.concat(compCardio);
           db.getCompStrByUserId(id)
             .then(compStr => {
-              completedWorkouts.push(compStr);
-              return completedWorkouts;
+              'should be a users completed workout'
+              completedWorkouts = completedWorkouts.concat(compStr)
+              completedWorkouts = completedWorkouts
+                .map(wo => wo.date.getDate())
+                .filter((date, i, a) => a.indexOf(date) === i)
+              res.send(completedWorkouts);
             })
         })
-    })
-    .then(completedWorkouts => {
-      res.send(completedWorkouts);
     })
     .catch(err=>console.error(err));
 });
@@ -113,25 +115,8 @@ app.post('/updateWorkouts', (req, res)=>{
   .then(()=>res.send('workouts updated'))
 })
 
-// app.get('/weather', (req, res) => {
-//   weather.getWeather((body) => {
-//     const parsedBody = JSON.parse(body);
-//     // console.log(parsedBody)
-//     const weatherInfo = {
-//       text: parsedBody[0].WeatherText,
-//       city: 'New Orleans',
-//       fahrenheit: parsedBody[0].Temperature.Imperial.Value,
-//       celsius: parsedBody[0].Temperature.Metric.Value,
-//       isDayTime: parsedBody[0].IsDayTime
-//     }
-//     res.send(weatherInfo)
-//   })
-//   // res.send(200);
-// })
-
-
 app.post('/weather', (req, res) => {
-  console.log(req.body.params.latitude, req.body.params.longitude, 'work pretty please');
+  // console.log(req.body.params.latitude, req.body.params.longitude, 'work pretty please');
   weather.getWeatherDarkSky(req.body.params.latitude, req.body.params.longitude, (err, body) => {  
     // console.log(body)
     let weatherInfo = {};
@@ -146,7 +131,7 @@ app.post('/weather', (req, res) => {
         humidity: parsedBody.currently.humidity,
         icon: parsedBody.currently.icon
       }
-      console.log(weatherInfo)
+      // console.log(weatherInfo)
       res.send(weatherInfo);
     }
   })
@@ -213,6 +198,7 @@ app.get('/lunch', (req,res) => {
     res.send(lunchRecipes);
   })
 })
+
 app.get('/signupWO', (req,res)=>{
   return Promise.all([
     db.getUs, 

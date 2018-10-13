@@ -17,7 +17,8 @@ export class WorkoutService {
   }
 
   getCompletedWorkouts(email) {
-    return this.httpClient.get('/getUser', {
+    console.log('making get request')
+    return this.httpClient.get('/getCompletedWO', {
       params: {
         email: email
       }
