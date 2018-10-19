@@ -106,8 +106,8 @@ export class WorkoutComponent implements OnInit {
 
     switchExercise() {
       this.index++;
-      this.storeInProgress(this.id, this.previous, this.index);
       this.exercise = this.workout[this.index];
+      this.storeInProgress(this.id, this.exercise.id, this.index);
       this.name = this.exercise.name;
     }
 
@@ -120,10 +120,7 @@ export class WorkoutComponent implements OnInit {
         this.trustedUrl = this.sanitizer.bypassSecurityTrustResourceUrl(`${this.youtube}?autoplay=1&loop=1`);
         this.start = true;
       } else {
-        this.increaseWONum()
-          .then(() => this.storeCompleted())
-          .then(() => this.storeInProgress(this.id, this.previous, 0))
-          .then(() => this.home())
+        Promise.all([this.storeCompleted(), this.storeInProgress(this.id, this.previous, 0), this.increaseWONum(), this.home()])
           .catch(err => console.error(err))
         ;        
       }
@@ -152,23 +149,15 @@ export class WorkoutComponent implements OnInit {
     }
 
     storeInProgress(id, ex_id, index){
-      console.log('heading to server')
       this.httpClient.post('/inProgress', {
         params: {id, ex_id, index}
-      }).subscribe(()=>console.log('back from server'))
+      }).subscribe()
     }
 
     testClick(){
       let cookie = document.cookie;
       let emailArr = cookie.split('=')
       let email = emailArr[2]
-      console.log(email);
-    }
-
-    printIt(){
-      console.log(this.exercise);
-      console.log(this.workout[0]);
-      console.log(this.workout[1]);
     }
     
     generateWO(){
@@ -181,7 +170,6 @@ export class WorkoutComponent implements OnInit {
             previous: this.previous
           }
         }).subscribe(wo=>{
-          console.log(wo)
           this.workout = wo;
           this.exercise = this.workout[this.index];
           this.previous = this.exercise.id;
@@ -196,7 +184,6 @@ export class WorkoutComponent implements OnInit {
       let cookie = document.cookie;
       let emailArr = cookie.split('=');
       this.email = emailArr[emailArr.length -1];
-      console.log(this.email, 'workout.component this.email');
     }
 
     getUserInfo(){
@@ -232,7 +219,7 @@ export class WorkoutComponent implements OnInit {
           params: {
             value, id
           }
-        }).subscribe(res=>console.log(res))
+        }).subscribe()
       })
     }
 

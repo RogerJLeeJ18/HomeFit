@@ -8,15 +8,25 @@
 }
 
 .container {
-  background-color: #899991;
+  background-color: #27213B;
+}
+
+.jumbotron {
+  background-color: #B73A58;
+  border-radius: 10px;
 }
 
 .button {
-  background-color:#CCCCFF;
-  color: white;
-  width: 100%;
+  border-radius: 5px;
+  background-color: #729085;
+  color: #F5F4F3;
+  font-weight: 900;
+  font-size: 2em;
+  position: absolute;
+  width: 93%;
+  height: 30%;
 }
 
 label {
-  color: white;
+  color: #F5F4F3;
 }

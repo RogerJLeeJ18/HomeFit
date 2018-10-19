@@ -8,6 +8,8 @@ const { spanishErrorResponse, spanishLinkAccountObjResponsesFeminine, spanishLin
 const { greetings, nextExerObjResponses, startWorkoutObjResponses, linkAccountObjResponses, errorResponses} = require('./engResponse');
 let googleWorkout = [];
 let current;
+let hasRun = false;
+let lastUserExercise;
 const randomNumGen = (numOptions) => {
   return Math.floor(Math.random() * numOptions);
 };
@@ -26,7 +28,7 @@ app.intent('Default Welcome Intent', conv =>{
 
     // console.log(conv.user.raw.locale, ' this is should be a this is the user property')
     
-    conv.ask(greetings[1]);
+    conv.ask(greetings[3]);
 
   }
 });
@@ -73,6 +75,8 @@ app.intent('link account', conv => {
           text: `Thank You!`,
           // speech: `<speak> <s> Thank you </s> <s> ${conv.body.queryResult.parameters.accountName} </s> <s> for linking your account to your current session. </s> <s> Lets get started </s> </speak>`
           speech: linkAccountObjResponses[index].before + conv.body.queryResult.parameters.accountName + linkAccountObjResponses[index].after
+
+          // speech: linkAccountObjResponses[index].before + conv.body.queryResult.parameters.accountName + linkAccountObjResponses[index].after
         }));
         return db.updateGoogleSessionIdForUser(conv.body.queryResult.parameters.accountName, conv.id);
       }
@@ -89,10 +93,14 @@ app.intent('link account', conv => {
 
 
 app.intent('start workout', conv => {
+  console.log('inside the start workout intent at the beginning');
+
   if (conv.user.raw.locale.slice(0, 2) === 'es') {
+    let gender = null;
     return db.getUserInfoByGoogleSessionId(conv.id)
       .then(user => {
         if (user !== undefined) {
+          gender = user.sex;
           const squatComf = user.squat_comf;
           const numWorkouts = user.workout_completes;
           return workout.generateWorkout(numWorkouts, squatComf);
@@ -103,7 +111,7 @@ app.intent('start workout', conv => {
           }));
         }
       })
-      .then(genWorkout => {
+      .then((genWorkout) => {
         if (genWorkout !== undefined) {
           googleWorkout = googleWorkout.length > 0 ? googleWorkout : genWorkout;
           return googleWorkout.splice(0, 1);
@@ -112,14 +120,12 @@ app.intent('start workout', conv => {
       .then(([currentExercise]) => {
         if (currentExercise !== undefined) {
           current = currentExercise;
-          // console.log(current, ' this should the current workout object');
 
           let index = randomNumGen(spanishStartWorkoutObjResponsesMasculine.length);
 
           conv.ask(new SimpleResponse({
             text: 'Avísame cuando esté listo de empezar.',
-            // speech: '<speak> <s> Let me know when you are ready to begin your ' + current.name + ' exercise and are in position. </s> </speak>'
-            speech: spanishStartWorkoutObjResponsesMasculine[index].before + current.name + spanishStartWorkoutObjResponsesMasculine[index].after
+            speech: spanishStartWorkoutObjResponsesMasculine[index].before + current.nombre + spanishStartWorkoutObjResponsesMasculine[index].after
           }));
 
         }
@@ -137,13 +143,14 @@ app.intent('start workout', conv => {
     // conv.ask(`Hola, mi llamo alexa`);
   } else {
 
-    // console.log(conv.id, ' conv.id inside the start workout intent');
+    console.log('inside the start workout intent');
     // need to remember to grab the conversation id
     return db.getUserInfoByGoogleSessionId(conv.id)
     .then(user => {
       if (user !== undefined) {
         const squatComf = user.squat_comf;
         const numWorkouts = user.workout_completes;
+        lastUserExercise = user.last_exercise_id;
         return workout.generateWorkout(numWorkouts, squatComf);
       } else {
         conv.ask(new SimpleResponse({
@@ -155,11 +162,21 @@ app.intent('start workout', conv => {
     .then(genWorkout => {
       if (genWorkout !== undefined) {
         googleWorkout = googleWorkout.length > 0 ? googleWorkout : genWorkout;
+        console.log(lastUserExercise, ' last user exercise before being applied to googleworkout');
+        if(!hasRun && !lastUserExercise){
+          googleWorkout.unshift(lastUserExercise);
+          hasRun = true;
+        }
+        console.log(googleWorkout[0], ' this is google workout index 0');
+        if(googleWorkout[0] === null){
+          googleWorkout.splice(0, 1);
+        }
         return googleWorkout.splice(0, 1);
       }
     })
     .then(([currentExercise]) => {
-      if (currentExercise !== undefined) {
+      console.log(currentExercise, ' the current exercise after first time');
+      if (currentExercise !== undefined && typeof currentExercise !== 'number') {
         current = currentExercise;
         // console.log(current, ' this should the current workout object');
         
@@ -172,6 +189,25 @@ app.intent('start workout', conv => {
           speech: startWorkoutObjResponses[index].before + current.name + startWorkoutObjResponses[index].after
         }));
         
+      } else {
+        return db.getExerciseById(currentExercise);
+      }
+    })
+    .then((currentExercise) =>{
+
+      if (currentExercise !== undefined) {
+        [currentExercise] = currentExercise;
+        current = currentExercise;
+        // console.log(current, ' this should the current workout object');
+
+        let index = randomNumGen(startWorkoutObjResponses.length);
+        console.log(index, ' startWorkoutObjResponses response index');
+
+        conv.ask(new SimpleResponse({
+          text: 'Let me know when you are ready to begin.',
+          // speech: '<speak> <s> Let me know when you are ready to begin your ' + current.name + ' exercise and are in position. </s> </speak>'
+          speech: startWorkoutObjResponses[index].before + current.name + startWorkoutObjResponses[index].after
+        }));
       }
     })
     .catch(err => {
@@ -188,30 +224,60 @@ app.intent('start workout', conv => {
 });
 
 app.intent('describe exercise', conv => {
+  console.log('inside the describe intent');
   if (conv.user.raw.locale.slice(0, 2) === 'es') {
-    conv.ask(`Hola, mi llamo alexa`);
+    conv.ask(`<speak> ${current.spanish_description} </speak>`);
   } else {
+    if(current !== undefined){
 
-    return db.getExerciseDescription(13)
-      .then(({ description }) =>{
-        
-        conv.ask('<speak> <prosody pitch="+16%"> ' + description + " </prosody> </speak>");
-      })
-    // conv.ask("<speak> This is the description for" + current.name +" </speak>");
-    // conv.ask("<speak>" + current.description + "</speak>");
+      conv.ask('<speak> <prosody pitch="+16%"> ' + current.description + " </prosody> </speak>");
+      // return db.getExerciseDescription(49)
+      //   .then(({ description }) =>{
+          
+      //     conv.ask('<speak> <prosody pitch="+16%"> ' + description + " </prosody> </speak>");
+      //   }).catch(err =>{
+      //     console.error(err);
+      //   });
+      // conv.ask("<speak> This is the description for" + current.name +" </speak>");
+      // conv.ask("<speak>" + current.description + "</speak>");
+    } else {
+      conv.ask(`
+      <speak>
+        <prosody pitch="-5%">
+          <s>
+            I will need you to have started your workout routine indorder to describe to you what workout you will be doing.
+          </s>
+        </prosody>
+      </speak>`);
+    }
   }
 });
 
 app.intent('take a break', conv => {
+  hasRun = false;
   if (conv.user.raw.locale.slice(0, 2) === 'es') {
-    conv.close(`De acuerdo, seguimos mas tarde.`);
+    conv.close(`De, acuerdo, seguimos más tarde.`);
   } else {
+    db.getUserInfoByGoogleSessionId(conv.id)
+    .then((user) => {
+      console.log(current.id, ' the current exercise id that should be updating the database');
+      
+      return db.updateLastWO((user.id, current.id));
+    })
+    .then(() => {
+      console.log('added current workout to user profile before ending session');
+    })
+    .catch(err => {
+      console.error(err);
+    })
     conv.close(`Okay, we will pick this up again later`);
   }
 })
 
 app.intent('next exercise', conv => {
   // console.log(conv.id, " conv.id inside of the next exercise intent");
+  console.log('inside the next intent');
+
   if (conv.user.raw.locale.slice(0, 2) === 'es') {
     return db.getUserInfoByGoogleSessionId(conv.id)
       .then(user => {
@@ -220,12 +286,12 @@ app.intent('next exercise', conv => {
             if (user.sex === 'm') {
             let index = randomNumGen(spanishNextExerObjResponsesMasculine.length);
             // let cadence = `<speak> <s> The recommended pace for ${current.name} is ${current.rep_time / 1000} seconds. </s> <s> Let's begin </s> <break time="500ms"/>`;
-            let cadence = spanishLinkAccountObjResponsesMasculine[index].part1.before + current.name + spanishLinkAccountObjResponsesMasculine[index].part1.prep + (current.rep_time / 1000) + spanishLinkAccountObjResponsesMasculine[index].part1.after;
+            let cadence = spanishLinkAccountObjResponsesMasculine[index].part1.before + current.nombre + spanishLinkAccountObjResponsesMasculine[index].part1.prep + (current.rep_time / 1000) + spanishLinkAccountObjResponsesMasculine[index].part1.after;
             for (let i = 1; i < 11; i++) {
               cadence += ` dame ${i} <break time="${current.rep_time}ms"/>`;
             }
             // cadence += ` <s> Lets take a break.</s> <s> Let me know when you are ready to do another set </s> <s> Or if you want to start ${googleWorkout[0].name}, we can do that as well</s> </speak>`;
-            cadence += spanishLinkAccountObjResponsesMasculine[index].part2.before + googleWorkout[0].name + spanishLinkAccountObjResponsesMasculine[index].part2.after;
+            cadence += spanishLinkAccountObjResponsesMasculine[index].part2.before + googleWorkout[0].nombre + spanishLinkAccountObjResponsesMasculine[index].part2.after;
             console.log(index, ' spanishLinkAccountObjResponsesMasculine response index');
 
             conv.ask(new SimpleResponse({
@@ -236,12 +302,12 @@ app.intent('next exercise', conv => {
           if (user.sex === 'f') {
             let index = randomNumGen(spanishLinkAccountObjResponsesFeminine.length);
             // let cadence = `<speak> <s> The recommended pace for ${current.name} is ${current.rep_time / 1000} seconds. </s> <s> Let's begin </s> <break time="500ms"/>`;
-            let cadence = spanishLinkAccountObjResponsesFeminine[index].part1.before + current.name + spanishLinkAccountObjResponsesFeminine[index].part1.prep + (current.rep_time / 1000) + spanishLinkAccountObjResponsesFeminine[index].part1.after;
+            let cadence = spanishLinkAccountObjResponsesFeminine[index].part1.before + current.nombre + spanishLinkAccountObjResponsesFeminine[index].part1.prep + (current.rep_time / 1000) + spanishLinkAccountObjResponsesFeminine[index].part1.after;
             for (let i = 1; i < 11; i++) {
               cadence += ` dame ${i} <break time="${current.rep_time}ms"/>`;
             }
             // cadence += ` <s> Lets take a break.</s> <s> Let me know when you are ready to do another set </s> <s> Or if you want to start ${googleWorkout[0].name}, we can do that as well</s> </speak>`;
-            cadence += spanishLinkAccountObjResponsesFeminine[index].part2.before + googleWorkout[0].name + spanishLinkAccountObjResponsesFeminine[index].part2.after;
+            cadence += spanishLinkAccountObjResponsesFeminine[index].part2.before + googleWorkout[0].nombre + spanishLinkAccountObjResponsesFeminine[index].part2.after;
             console.log(index, ' spanishLinkAccountObjResponsesFeminine response index');
 
             conv.ask(new SimpleResponse({
@@ -290,6 +356,16 @@ app.intent('next exercise', conv => {
             text: `Try and keep pace`,
             speech: cadence
           }));
+        } else {
+          conv.ask(`
+          <speak>
+            <prosody pitch="-5%">
+              <s>
+                You will need to begin your workout inorder for me to count down your current exercise
+              </s>
+            </prosody>
+          </speak>
+          `);
         }
       } else {
   
@@ -306,14 +382,21 @@ app.intent('next exercise', conv => {
         text: 'Something went wrong',
         // speech: `<speak> <p> <s> I'm sorry something appears to have gone wrong. </s> Please try again </p> </speak>`
         speech: errorResponses[index]
-      }));
+      })); 
       })
     }
 });
 
 app.intent('Default Fallback Intent', conv => {
+  console.log('inside the fallback intent');
+
   if (conv.user.raw.locale.slice(0, 2) === 'es') {
-    conv.ask(`Hola, mi llamo alexa`);
+    let index = randomNumGen(spanishErrorResponse);
+    conv.ask(new SimpleResponse({
+      text: 'Perdón, hemos tenido un problema',
+      speech: spanishErrorResponse[index]
+    }));
+    // conv.ask(`Hola, mi llamo alexa`);
   } else {
     let index = randomNumGen(errorResponses);
     conv.ask(new SimpleResponse({

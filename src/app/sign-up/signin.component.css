@@ -7,7 +7,7 @@
 }
 
 .container {
-  background-color: #000000;
+  background-color: #27213B;
 }
 
 .homeDemo {
@@ -21,11 +21,20 @@
 
 .sign-in_button {
   /* background-color: #FAA24A; */
-  background-color: #CCCCFF;
-  color: white;
+  background-color: #729085;
+  color: #F5F4F3;
+  font-family: 'Ubuntu';
+  text-transform: uppercase;
 }
 
 .op_spark_logo {
   float: right;
   position: relative;
+  max-height: 50%;
+  max-width: 50%;
+}
+
+.google_logo {
+  max-height: 50%;
+  max-width: 50%;
 }

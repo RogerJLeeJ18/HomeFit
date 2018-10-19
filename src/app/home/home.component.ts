@@ -44,7 +44,6 @@ export class HomeComponent implements OnInit {
     getCurrentTime() {
       this.timeStamp = new Date();
       this.timeStampString = this.timeStamp.toString();
-      // console.log(this.timeStampString);
     }
 
     Clock = Date.now();
@@ -68,7 +67,6 @@ export class HomeComponent implements OnInit {
     })
     .subscribe(data => {
       this.currentWeather.push(data)
-      console.log(this.currentWeather)
       this.runningRecommendation = this.currentWeather[0].recommendation;
     },
       error => {
@@ -81,7 +79,6 @@ export class HomeComponent implements OnInit {
     let cookie = document.cookie;
     let emailArr = cookie.split('=');
     this.email = emailArr[emailArr.length - 1];
-    console.log(this.email)
     return this.httpClient.get('/username', {
       params: {
         user: this.email
@@ -112,7 +109,7 @@ export class HomeComponent implements OnInit {
   }
 
   getBreakfast() {
-    return this.foodService.getBreakfast()
+    return this.httpClient.get('/breakfast')
       .subscribe(breakfastFood => {
         this.meals = breakfastFood
         this.imageUrls = this.meals.map(meal => {
@@ -126,7 +123,6 @@ export class HomeComponent implements OnInit {
             clickAction: proof
           }
         })
-        console.log(this.imageUrls)
       })
   }
 
@@ -153,21 +149,24 @@ export class HomeComponent implements OnInit {
 
 
   getDinner() {
-    return this.foodService.getDinner()
-      .subscribe(dinnerFood => {
-        console.log(dinnerFood);
-        this.meals = dinnerFood;
-        this.imageUrls = this.meals.map(meal => {
-          let proof = () => {
-            window.open(meal.url);
+    return new Promise((resolve, reject)=>{
+      this.foodService.getDinner()
+        .subscribe(dinnerFood => {
+          this.meals = dinnerFood;
+           let imageUrls = this.meals.map(meal => {
+            return {
+              url: meal.image,
+              href: meal.url,
+              clickAction: ()=>window.open(meal.url)
+            }
+          })
+          if(imageUrls.length){
+            resolve(imageUrls)
+          } else {
+            reject('Dinner Error')
           }
-          return {
-            url: meal.image,
-            href: meal.url,
-            clickAction: proof
-          }
-        })
-      });
+        });
+    })
   }
 
   getTime() {
@@ -213,7 +212,10 @@ export class HomeComponent implements OnInit {
         this.imageUrls = result;
       })
     } else {
-      this.getDinner();
+      this.getDinner()
+      .then((result)=>{
+        this.imageUrls = result;
+      })
     }
   }
 
