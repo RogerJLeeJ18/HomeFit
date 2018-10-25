@@ -11,8 +11,8 @@ const workout = require('../Algorithms/workout.js');
 const sse = require('../../sse');
 const fs = require('fs');
 const google = require('../googleAssHelpers/helpers');
+const bcrypt = require('bcrypt');
 const alexaRouter = express.Router()
-
 
 app.use('/alexa', alexaRouter);
 app.use(express.static('dist/HomeFit'));
@@ -30,6 +30,32 @@ app.use(bodyParser.urlencoded({
 
 app.post('/fulfillment', google);
 
+app.post('/diet', (req,res)=>{
+  let restrictions = req.body.params.restrictions;
+  let user = JSON.parse(req.body.params.user);
+  restrictions.forEach(restriction=>{
+    db.getDietaryRestrictionsIdByName(restriction)
+    .then(result=>{
+      db.insertIntoUserDiet(user.id, result.id)
+    })
+    .catch(err=>console.error(err))    
+  })
+  res.send('coming from server')
+})
+app.post('/logout', (req, res)=>{
+  const user = JSON.parse(req.body.params.user)
+  console.log(user.id)
+  db.updateSessionOfUserById(user.id, false)
+  .then(()=>res.send('You have been logged out'))
+  .catch(err=>console.error(err))
+})
+app.post('/login', (req,res)=>{
+  const user = JSON.parse(req.body.params.user)
+  db.updateSessionOfUserById(user.id, true)
+  .then(() => res.send('You have been logged in'))
+  .catch(err => console.error(err))
+})
+
 app.get('/generateWO', (req, res)=> {
   wo_num = req.query.wo_num;
   diff = req.query.diff;
@@ -43,7 +69,7 @@ app.get('/generateWO', (req, res)=> {
 })
 
 app.get('/test', (req, res)=>{
-  meal.getDinnerMeal('steak',0,1000)
+  meal.testGet()
   .then(recipes=>res.send(recipes))
   .catch(err=>console.error(err))
 })
@@ -93,9 +119,16 @@ app.get('/getCompletedWO', (req, res) => {
 });
 
 app.get('/homeFitAuth', (req, res) => {
-  db.getPasswordByEmail(req.query.email)
-  .then(password=> {
-    res.send(password)
+  db.getUserInfoByEmail(req.query.email)
+  .then(user=> {
+    bcrypt.compare(req.query.password, user.password, (err, result) => {
+      if (err) {
+        console.error(err);
+      } else {
+        db.updateSessionOfUserById(user.id, true)
+        res.send(result);
+      }
+    })
   })
 })
 
@@ -112,6 +145,7 @@ app.post('/updateWorkouts', (req, res)=>{
 
 app.post('/weather', (req, res) => {
   let weatherInfo = {};
+  console.log(req.body.params.timeStamp);
   Promise.all([
       weather.getWeatherDarkSky(req.body.params.latitude, req.body.params.longitude),
       weather.createDayNightLabel(req.body.params.timeStamp),
@@ -152,21 +186,26 @@ app.get('/username', (req, res) => {
   })
 
 app.get('/dinner', (req,res)=>{
-  meal.getDinner()
+  const user = JSON.parse(req.query.user)
+  const cal = JSON.parse(req.query.calorieProfile)
+  db.getUserDietByUserId(user.id)
+  .then(diet => meal.getDinner(cal.lunchMin, cal.lunchMax, diet))
   .then(recipes=> recipes.map(recipe=>recipe.recipe))
-    .then(dinner=>res.send(dinner))
-    .catch(err=>console.error(err));
+  .then(dinner=>res.send(dinner))
+  .catch(err=>console.error(err));
 })
 
 app.get('/lunch', (req,res) => {
-  meal.getLunch()
+  const cal = JSON.parse(req.query.calorieProfile)
+  meal.getLunch(cal.lunchMin, cal.lunchMax, '')
     .then(recipes => recipes.map(recipe => recipe.recipe))
     .then(lunch=>res.send(lunch))
     .catch(err => console.error(err))
 })
 
 app.get('/breakfast', (req, res) => {
-  meal.getBreakfast()
+  const cal = JSON.parse(req.query.calorieProfile)
+  meal.getBreakfast(cal.lunchMin, cal.lunchMax, '')
     .then(recipes => recipes.map(recipe => recipe.recipe))
     .then(dinner => res.send(dinner))
     .catch(err => console.error(err));
@@ -184,21 +223,21 @@ app.post('/signUp', (req, res) =>{
   let email  = req.body.params.email;
   let username = req.body.params.userName;
   let password = req.body.params.password;
-  db.addNewUser(weight, numPushUps, jogDist, age, sex, height, squatComf, goals, email, username, password)
-    .then(()=>{
-      return Promise.all([db.getUserIdByEmail(email)])
+  bcrypt.genSalt(10, function (err, salt) {
+    bcrypt.hash(password, salt, (err, hash)=> {
+      db.addNewUser(weight, numPushUps, jogDist, age, sex, height, squatComf, goals, username, email, hash)
+        .then(()=>{
+          return db.getUserInfoByEmail(email)
+        })
+        .then(user=>{
+          db.updateSessionOfUserById(user.id, true)
+          return user;
+        })
         .catch(err=>console.error(err));
-    })
-    .then(([user,regimen])=> {
-      const ins = [];
-      regimen.forEach(exer=>{
-        ins.push(JSON.stringify(exer))
-      })
-      db.insertIntoExerciseWorkoutsByUserIdAndArrayOfJson(user.id, ins)
-    })
-    .catch(err=>console.error(err));
-  res.end();
-});
+    res.end();
+    });
+  });
+})
 
 alexaRouter.post('/fitnessTrainer', (req, res) => {
   if (req.body.request.type === 'LaunchRequest') {
@@ -329,8 +368,17 @@ app.post('/savePartial', (req, res) => {
     .catch(error => console.error());
   res.send('got it')
 })
+
+app.get('/calories', (req,res)=>{
+  meal.setCalories(req.query.user, req.query.completes, req.query.today)
+  .then(calorieProfile=>{
+    res.send(calorieProfile)
+  })
+  .catch(err=>console.error(err))
+})
 const port = 3000;
 app.listen(port, () => {
   console.log(`HomeFit is listening on port ${port}!`);
   app.keepAliveTimeout = 0;
 });
+

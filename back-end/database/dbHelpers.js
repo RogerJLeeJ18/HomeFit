@@ -1,6 +1,7 @@
 // require pg-promise
 const pgp = require('pg-promise')();
 //require the config js to get the libPass
+const bcrypt = require('bcrypt');
 const { libPass } = require('../../config');
 
 const connection = {
@@ -56,7 +57,7 @@ module.exports = {
     SELECT name, type FROM dietary_restrictions 
     INNER JOIN user_dietary ON (dietary_restrictions.id = user_dietary.id_dietary_restrictions 
     AND user_dietary.id_user = $1)
-    `, [userId]).then(([userDiet]) => userDiet),
+    `, [userId]),
 
   getWeatherImages: (text, time) => db.any(`
     SELECT url FROM weather_images
@@ -106,13 +107,19 @@ module.exports = {
     WHERE user_email = $1
   `, [email]).then(([id]) => id),
 
-  
-  addNewUser: (weight, numPushUps, jogDist, age, sex, height, squatComf, goals, email, preferredUsername, password) => db.any(`
+  //refactor adding user to for hashing passwords
+  // addUserWithHashedPassword: (preferredUsername, email, password) => db.any(`
+  //     INSERT INTO users (preferred_username, user_email, password)
+  //     VALUES ($1, $2, $3)
+  // `, [preferredUsername, email, password]),
+
+  //
+  addNewUser: (weight, numPushUps, jogDist, age, sex, height, squatComf, goals, preferredUsername, email, password) => db.any(`
     INSERT INTO users 
-    (weight, num_push_ups, jog_dist, age, sex, height, squat_comf, workout_completes, goals, user_email, preferred_username, password)
+    (weight, num_push_ups, jog_dist, age, sex, height, squat_comf, workout_completes, goals, preferred_username, user_email, password)
     VALUES
     ($1, $2, $3, $4, $5, $6, $7, 0, $8, $9, $10, $11)
-  `, [weight, numPushUps, jogDist, age, sex, height, squatComf, goals, email, preferredUsername, password]),
+  `, [weight, numPushUps, jogDist, age, sex, height, squatComf, goals, preferredUsername, email, password]),
 
 
   // will most likely need to call this within a loop over the different diet ids
@@ -143,6 +150,12 @@ module.exports = {
     WHERE id = $1
   `, [userID, index]),
 
+  updateVoiceInterfaceSets: (userId, sets) => db.any(`
+    UPDATE users
+    SET
+    voice_interface_sets = $2
+    WHERE id = $1
+  `,[userId, sets]),
 
   updateLastWO: (userID, last)=> db.any(`
       UPDATE users
@@ -166,6 +179,17 @@ module.exports = {
   WHERE
   user_email = $1
   `, [email, alexaId]),
+
+  //set the session to either true or false based on when this method is invoked
+  //if invoked on the login status we set session to true, if we logout we set session to false
+  //cookie will still be needed to verify you are you
+  updateSessionOfUserById: (userId, session) => db.any(`
+  UPDATE users
+  SET
+  session = $2
+  WHERE
+  id = $1
+  `, [userId, session]),
 
   undoUserDietaryRestrictionByIds: (userId, dietId) => db.any(`
     DELETE FROM user_dietary

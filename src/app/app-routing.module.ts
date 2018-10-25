@@ -20,7 +20,7 @@ const routes: Routes = [
   { path: 'home', component: HomeComponent},
   { path: 'settings', component: SettingsComponent},
   { path: 'personalInfo', component: SettingsPersonalInfoComponent},
-  { path: 'dietaryRestrictions', component: DietaryRestrictionsComponent},
+  { path: 'diet', component: DietaryRestrictionsComponent},
   { path: 'workout', component: WorkoutComponent},
   { path: 'meals', component: MealsComponent},
   { path: 'login', component: LoginComponent},
@@ -29,7 +29,7 @@ const routes: Routes = [
 ];
 
 @NgModule({
-  imports: [RouterModule.forRoot(routes)],
+  imports: [RouterModule.forRoot(routes, {useHash: true})],
   exports: [RouterModule]
 })
 

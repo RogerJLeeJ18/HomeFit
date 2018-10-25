@@ -18,7 +18,7 @@ const app = dialogflow();
 
 
 app.intent('Default Welcome Intent', conv =>{
-  console.log(conv.user)
+  // console.log(conv.user)
   if (conv.user.raw.locale.slice(0, 2) === 'es') {
     let index = randomNumGen(spanishGreetings.length);
     conv.ask(spanishGreetings[index]);
@@ -28,7 +28,7 @@ app.intent('Default Welcome Intent', conv =>{
 
     // console.log(conv.user.raw.locale, ' this is should be a this is the user property')
     
-    conv.ask(greetings[3]);
+    conv.ask(greetings[index]);
 
   }
 });
@@ -162,12 +162,12 @@ app.intent('start workout', conv => {
     .then(genWorkout => {
       if (genWorkout !== undefined) {
         googleWorkout = googleWorkout.length > 0 ? googleWorkout : genWorkout;
-        console.log(lastUserExercise, ' last user exercise before being applied to googleworkout');
+        // console.log(lastUserExercise, ' last user exercise before being applied to googleworkout');
         if(!hasRun && !lastUserExercise){
           googleWorkout.unshift(lastUserExercise);
           hasRun = true;
         }
-        console.log(googleWorkout[0], ' this is google workout index 0');
+        // console.log(googleWorkout[0], ' this is google workout index 0');
         if(googleWorkout[0] === null){
           googleWorkout.splice(0, 1);
         }
@@ -175,7 +175,7 @@ app.intent('start workout', conv => {
       }
     })
     .then(([currentExercise]) => {
-      console.log(currentExercise, ' the current exercise after first time');
+      // console.log(currentExercise, ' the current exercise after first time');
       if (currentExercise !== undefined && typeof currentExercise !== 'number') {
         current = currentExercise;
         // console.log(current, ' this should the current workout object');
@@ -186,7 +186,7 @@ app.intent('start workout', conv => {
         conv.ask(new SimpleResponse({
           text: 'Let me know when you are ready to begin.',
           // speech: '<speak> <s> Let me know when you are ready to begin your ' + current.name + ' exercise and are in position. </s> </speak>'
-          speech: startWorkoutObjResponses[index].before + current.name + startWorkoutObjResponses[index].after
+          speech: startWorkoutObjResponses[0].before + current.name + startWorkoutObjResponses[0].after
         }));
         
       } else {
@@ -245,7 +245,7 @@ app.intent('describe exercise', conv => {
       <speak>
         <prosody pitch="-5%">
           <s>
-            I will need you to have started your workout routine indorder to describe to you what workout you will be doing.
+            I will need you to have started your workout routine in order to describe to you what workout you will be doing.
           </s>
         </prosody>
       </speak>`);
@@ -285,14 +285,17 @@ app.intent('next exercise', conv => {
           if (current !== undefined) {
             if (user.sex === 'm') {
             let index = randomNumGen(spanishNextExerObjResponsesMasculine.length);
+            console.log(spanishNextExerObjResponsesMasculine[index].part2.before, 'spanishNextExerObjResponsesM[index].part2');
+            
             // let cadence = `<speak> <s> The recommended pace for ${current.name} is ${current.rep_time / 1000} seconds. </s> <s> Let's begin </s> <break time="500ms"/>`;
-            let cadence = spanishLinkAccountObjResponsesMasculine[index].part1.before + current.nombre + spanishLinkAccountObjResponsesMasculine[index].part1.prep + (current.rep_time / 1000) + spanishLinkAccountObjResponsesMasculine[index].part1.after;
+            // let cadence = spanishNextExerObjResponsesMasculine[index].part1.before + current.nombre + spanishNextExerObjResponsesMasculine[index].part1.prep + (current.rep_time / 1000) + spanishNextExerObjResponsesMasculine[index].part1.after;
+              let cadence = spanishNextExerObjResponsesMasculine[0].part1.before + current.nombre + spanishNextExerObjResponsesMasculine[0].part1.prep + (current.rep_time / 1000) + spanishNextExerObjResponsesMasculine[0].part1.after;
             for (let i = 1; i < 11; i++) {
               cadence += ` dame ${i} <break time="${current.rep_time}ms"/>`;
             }
             // cadence += ` <s> Lets take a break.</s> <s> Let me know when you are ready to do another set </s> <s> Or if you want to start ${googleWorkout[0].name}, we can do that as well</s> </speak>`;
-            cadence += spanishLinkAccountObjResponsesMasculine[index].part2.before + googleWorkout[0].nombre + spanishLinkAccountObjResponsesMasculine[index].part2.after;
-            console.log(index, ' spanishLinkAccountObjResponsesMasculine response index');
+            cadence += spanishNextExerObjResponsesMasculine[index].part2.before + googleWorkout[0].nombre + spanishNextExerObjResponsesMasculine[index].part2.after;
+            console.log(index, ' spanishNextExerObjResponsesMasculine response index');
 
             conv.ask(new SimpleResponse({
               text: `Intenta mantener el ritmo`,
@@ -300,23 +303,21 @@ app.intent('next exercise', conv => {
             }));
           }
           if (user.sex === 'f') {
-            let index = randomNumGen(spanishLinkAccountObjResponsesFeminine.length);
+            let index = randomNumGen(spanishNextExerObjResponsesFeminine.length);
             // let cadence = `<speak> <s> The recommended pace for ${current.name} is ${current.rep_time / 1000} seconds. </s> <s> Let's begin </s> <break time="500ms"/>`;
-            let cadence = spanishLinkAccountObjResponsesFeminine[index].part1.before + current.nombre + spanishLinkAccountObjResponsesFeminine[index].part1.prep + (current.rep_time / 1000) + spanishLinkAccountObjResponsesFeminine[index].part1.after;
+            let cadence = spanishNextExerObjResponsesFeminine[index].part1.before + current.nombre + spanishLinkAccountObjResponsesFeminine[index].part1.prep + (current.rep_time / 1000) + spanishNextExerObjResponsesFeminine[index].part1.after;
             for (let i = 1; i < 11; i++) {
               cadence += ` dame ${i} <break time="${current.rep_time}ms"/>`;
             }
             // cadence += ` <s> Lets take a break.</s> <s> Let me know when you are ready to do another set </s> <s> Or if you want to start ${googleWorkout[0].name}, we can do that as well</s> </speak>`;
-            cadence += spanishLinkAccountObjResponsesFeminine[index].part2.before + googleWorkout[0].nombre + spanishLinkAccountObjResponsesFeminine[index].part2.after;
-            console.log(index, ' spanishLinkAccountObjResponsesFeminine response index');
+            cadence += spanishNextExerObjResponsesFeminine[index].part2.before + googleWorkout[0].nombre + spanishNextExerObjResponsesFeminine[index].part2.after;
+            console.log(index, ' spanishNextExerObjResponsesFeminine response index');
 
             conv.ask(new SimpleResponse({
               text: `Intenta mantener el ritmo`,
               speech: cadence
             }));
           }
-          } else {
-
           }
         } else {
 
@@ -328,7 +329,7 @@ app.intent('next exercise', conv => {
       })
       .catch(err => {
         let index = randomNumGen(spanishErrorResponse);
-        console.log(err);
+        console.error(err);
         conv.ask(new SimpleResponse({
           text: 'Hay un problema',
           // speech: `<speak> <p> <s> I'm sorry something appears to have gone wrong. </s> Please try again </p> </speak>`
@@ -361,7 +362,7 @@ app.intent('next exercise', conv => {
           <speak>
             <prosody pitch="-5%">
               <s>
-                You will need to begin your workout inorder for me to count down your current exercise
+                You will need to begin your workout in order for me to count down your current exercise
               </s>
             </prosody>
           </speak>
@@ -377,7 +378,7 @@ app.intent('next exercise', conv => {
     })
     .catch(err => {
       let index = randomNumGen(errorResponses);
-      console.log(err);
+      console.error(err);
       conv.ask(new SimpleResponse({
         text: 'Something went wrong',
         // speech: `<speak> <p> <s> I'm sorry something appears to have gone wrong. </s> Please try again </p> </speak>`
